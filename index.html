@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>음악 은하 플레이어</title>
+<title>Stardust Music Galaxy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -46,6 +46,8 @@ select.ctl{appearance:none;padding-right:26px;background:var(--card) url("data:i
 .play{background:#fff;color:#000;border:0;border-radius:6px;height:32px;padding:0 14px;font-weight:600;cursor:pointer}
 .x{position:absolute;top:8px;right:8px;background:none;border:0;color:var(--dim);width:32px;height:32px;cursor:pointer;font-size:16px}
 #pTitle:focus,#pArtist:focus{outline:1px dashed #666;outline-offset:2px}
+.tags .unk{color:#c98;border-style:dashed}
+.tags #pYear{cursor:text}
 #panel h3{font-size:12px;color:var(--dim);font-weight:400;margin:4px 0 0}
 #list{overflow:auto;margin:0;padding:0;list-style:none;flex:1}
 #list li{display:flex;gap:8px;align-items:center;padding:5px 4px;border-radius:4px;cursor:pointer}
@@ -61,6 +63,8 @@ select.ctl{appearance:none;padding-right:26px;background:var(--card) url("data:i
 .hint{color:var(--dim);margin-left:4px;align-self:center}
 .player{margin-left:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:10px;width:min(460px,100%)}
 .player button{background:none;border:0;width:36px;height:36px;cursor:pointer;font-size:15px;flex:none}
+.player #shuf{font-size:14px;opacity:.4;border-radius:50%}
+.player #shuf.on{opacity:1;background:#2a1520;box-shadow:inset 0 0 0 1px var(--acc)}
 .player #pp{background:#fff;color:#000;border-radius:50%}
 .player img{width:36px;height:36px;border-radius:4px;flex:none}
 .pinfo{flex:1;overflow:hidden}
@@ -104,49 +108,49 @@ body.drop #c{outline:2px dashed var(--acc);outline-offset:-10px}
 </style>
 </head>
 <body>
-<canvas id="c" aria-label="곡들이 점으로 표시된 3D 음악 은하"></canvas>
+<canvas id="c" aria-label="3D music galaxy, one dot per track"></canvas>
 
 <header class="top">
-  <div class="brand">STARDUST <small>/ 내 음악 은하</small></div>
-  <label class="ctl time" title="이 해까지 추가된 곡만 표시">
-    <input id="year" type="range" min="2013" max="2025" value="2025" aria-label="연도">
+  <div class="brand">STARDUST <small>/ my music galaxy</small></div>
+  <label class="ctl time" title="Show tracks released up to this year">
+    <input id="year" type="range" min="2013" max="2025" value="2025" aria-label="Year">
     <b id="yearL">~2025</b>
   </label>
-  <label class="ctl">⌕<input id="q" type="search" placeholder="곡·아티스트 검색" aria-label="검색"></label>
-  <select id="genre" class="ctl" aria-label="장르"></select>
-  <select id="layout" class="ctl" aria-label="배치">
-    <option value="sphere">구 (표면)</option>
-    <option value="galaxy">나선 은하</option>
-    <option value="clusters">장르 성단</option>
-    <option value="helix">연도 나선</option>
+  <label class="ctl">⌕<input id="q" type="search" placeholder="Search" aria-label="Search"></label>
+  <select id="genre" class="ctl" aria-label="Genre"></select>
+  <select id="layout" class="ctl" aria-label="Layout">
+    <option value="sphere">Sphere</option>
+    <option value="galaxy">Spiral galaxy</option>
+    <option value="clusters">Genre clusters</option>
+    <option value="helix">Year helix</option>
   </select>
-  <button class="btn" id="addBtn">+ 내 음악 파일</button>
-  <button class="btn" id="ytBtn">+ 유튜브 링크</button>
-  <button class="btn" id="clear">전체 삭제</button>
+  <button class="btn" id="addBtn">+ Audio files</button>
+  <button class="btn" id="ytBtn">+ YouTube link</button>
+  <button class="btn" id="clear">Clear all</button>
   <input id="files" type="file" accept="audio/*" multiple>
 </header>
 
-<div id="empty"><div><b>아직 은하가 비어 있어요</b><p>음악 파일을 이 화면에 끌어다 놓거나<br>위의 <u>+ 내 음악 파일</u>을 눌러 추가하세요.</p><p class="sm">유튜브 링크는 영상 제목에서 아티스트와 곡명을 자동으로 나눠요.<br>파일 이름이 “아티스트 - 곡명” 형식이면 아티스트별로 묶여요.<br>추가한 곡은 이 브라우저에만 저장돼요.</p><button class="play" id="emptyAdd">음악 파일 고르기</button> <button class="btn" id="emptyYt" style="height:44px">유튜브 링크 넣기</button></div></div>
-<div id="confirm" role="dialog" aria-modal="true"><div><b>모든 곡을 지울까요?</b><p>이 브라우저에 저장된 곡이 모두 삭제돼요.</p><button class="btn" id="cNo">취소</button> <button class="play" id="cYes">전체 삭제</button></div></div>
+<div id="empty"><div><b>Your galaxy is empty</b><p>Drop audio files anywhere on this screen,<br>or use <u>+ Audio files</u> above.</p><p class="sm">YouTube titles are split into artist and track automatically.<br>Name files “Artist - Title” to group them by artist.<br>Tracks are saved in this browser only.</p><button class="play" id="emptyAdd">Choose audio files</button> <button class="btn" id="emptyYt" style="height:44px">Add YouTube link</button></div></div>
+<div id="confirm" role="dialog" aria-modal="true"><div><b>Remove every track?</b><p>All tracks saved in this browser will be deleted.</p><button class="btn" id="cNo">Cancel</button> <button class="play" id="cYes">Clear all</button></div></div>
 <div id="ytDlg" class="dlg" role="dialog" aria-modal="true" aria-labelledby="ytH"><form id="ytForm">
-  <b id="ytH">유튜브 링크로 곡 추가</b>
-  <p>링크를 붙여넣으세요. 여러 개는 줄바꿈이나 띄어쓰기로 구분하면 돼요.</p>
+  <b id="ytH">Add tracks from YouTube</b>
+  <p>Paste one or more links, separated by spaces or new lines.</p>
   <textarea id="ytUrl" rows="4" placeholder="https://www.youtube.com/watch?v=…&#10;https://youtu.be/…"></textarea>
   <p id="ytMsg" class="sm" aria-live="polite"></p>
-  <button type="button" class="btn" id="ytCancel">취소</button> <button class="play" type="submit">추가</button>
+  <button type="button" class="btn" id="ytCancel">Cancel</button> <button class="play" type="submit">Add</button>
 </form></div>
-<div id="ytbox" aria-label="유튜브 플레이어"><div id="ytp"></div></div>
+<div id="ytbox" aria-label="YouTube player"><div id="ytp"></div></div>
 <div id="tip"><img alt=""><div><span></span><small></small></div></div>
 
 <aside id="panel" aria-live="polite">
-  <button class="x" id="close" aria-label="닫기">✕</button>
+  <button class="x" id="close" aria-label="Close">✕</button>
   <div class="head">
     <img id="pCover" alt="">
     <div>
-      <h2 id="pTitle" contenteditable="plaintext-only" spellcheck="false" title="눌러서 제목 고치기"></h2>
-      <p id="pArtist" contenteditable="plaintext-only" spellcheck="false" title="눌러서 아티스트 고치기"></p>
+      <h2 id="pTitle" contenteditable="plaintext-only" spellcheck="false" title="Click to edit title"></h2>
+      <p id="pArtist" contenteditable="plaintext-only" spellcheck="false" title="Click to edit artist"></p>
       <div class="tags" id="pTags"></div>
-      <button class="play" id="pPlay">▶ 재생</button> <button class="del" id="pDel">삭제</button>
+      <button class="play" id="pPlay">▶ Play</button> <button class="del" id="pDel">Delete</button>
     </div>
   </div>
   <h3 id="pMore"></h3>
@@ -159,13 +163,14 @@ body.drop #c{outline:2px dashed var(--acc);outline-offset:-10px}
     <div><small>ARTISTS</small><span id="sA">0</span></div>
     <div><small>SPAN</small><span id="sS">–</span></div>
   </div>
-  <span class="hint">드래그 회전 · 휠 확대 · 점 클릭 · 스페이스 재생</span>
+  <span class="hint">Drag to rotate · Scroll to zoom · Click a dot · Space to play · S to shuffle</span>
   <div class="player">
-    <button id="prev" aria-label="이전 곡">⏮</button>
-    <button id="pp" aria-label="재생/일시정지">▶</button>
-    <button id="next" aria-label="다음 곡">⏭</button>
+    <button id="prev" aria-label="Previous">⏮</button>
+    <button id="pp" aria-label="Play/Pause">▶</button>
+    <button id="next" aria-label="Next">⏭</button>
+    <button id="shuf" aria-label="Shuffle" aria-pressed="false" title="Shuffle">🔀</button>
     <img id="mCover" alt="" style="visibility:hidden">
-    <div class="pinfo"><div id="mTitle">점을 눌러 곡을 고르세요</div><small id="mSub"></small><div class="bar" id="bar"><i id="barI"></i></div></div>
+    <div class="pinfo"><div id="mTitle">Pick a dot to play</div><small id="mSub"></small><div class="bar" id="bar"><i id="barI"></i></div></div>
   </div>
 </footer>
 
@@ -186,7 +191,7 @@ const T1=['새벽','파도','유리','정전기','여름','Midnight','Soft','Bro
 const T2=['Signal','Bloom','Tape','Engine','Rain','정류장','편지','Garden','Static','Hours','Orbit','Theme','Dream','Ritual','Window','버스','고양이','Echo','Shore','Light'];
 const cap=s=>s[0].toUpperCase()+s.slice(1);
 let tracks=[];
-function sortTracks(){tracks.sort((a,b)=>a.added-b.added);tracks.forEach((t,i)=>{t.i=i;if(t.x==null){const a=Math.random()*6.283;t.x=Math.cos(a)*.03;t.z=Math.sin(a)*.03;t.y=0}})}
+function sortTracks(){tracks.sort((a,b)=>a.year+a.day-b.year-b.day||a.added-b.added);tracks.forEach((t,i)=>{t.i=i;if(t.x==null){const a=Math.random()*6.283;t.x=Math.cos(a)*.03;t.z=Math.sin(a)*.03;t.y=0}})}
 sortTracks();
 
 /* ---------- 앨범 커버 생성 ---------- */
@@ -233,7 +238,7 @@ function refreshUI(){
   $('year').min=y0===y1?y0-1:y0;$('year').max=y1;yearMax=y1;$('year').value=yearMax;$('yearL').textContent='~'+yearMax;
   $('empty').style.display=tracks.length?'none':'flex';$('clear').style.display=tracks.length?'':'none';
   const sel=$('genre'),cur=sel.value||'all';
-  sel.innerHTML='<option value="all">전체 장르</option>'+genreList().map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join('');sel.value=cur;
+  sel.innerHTML='<option value="all">All genres</option>'+genreList().map(g=>`<option value="${esc(g)}">${esc(g)}</option>`).join('');sel.value=cur;
   $('sT').textContent=tracks.length.toLocaleString();$('sA').textContent=new Set(tracks.map(t=>t.artist)).size;$('sS').textContent=ys.length?(Math.min(...ys)===Math.max(...ys)?ys[0]:Math.min(...ys)+'–'+Math.max(...ys)):'–';
 }
 
@@ -319,9 +324,10 @@ function findHover(x,y,rad=10){
 function select(t){
   sel=t;$('panel').classList.add('on');
   $('pCover').src=cover(t);$('pTitle').textContent=t.title;$('pArtist').textContent=t.artist;
-  $('pTags').innerHTML=[t.genre,t.year,t.dur?fmt(t.dur):'–'].map(v=>`<span>${esc(v)}</span>`).join('');
+  $('pTags').innerHTML=[t.genre,t.dur?fmt(t.dur):'–'].map(v=>`<span>${esc(v)}</span>`).join('')+`<span id="pYear" contenteditable="plaintext-only" title="Release date (click to edit)" class="${t.released?'':'unk'}">${t.released?esc(t.released):(t.looking?'Finding year…':'Year ?')}</span>`;
+  bindYear();
   const same=tracks.filter(x=>x.artist===t.artist);
-  $('pMore').textContent=`${t.artist}의 곡 (${same.length})`;
+  $('pMore').textContent=`Tracks by ${t.artist} (${same.length})`;
   $('list').innerHTML=same.map(x=>`<li data-i="${x.i}" class="${x===t?'cur':''}"><img src="${cover(x)}" alt=""><em>${x.year}</em><span>${esc(x.title)}</span></li>`).join('');
   syncPlayBtn();
 }
@@ -378,7 +384,7 @@ function loadYT(){
   ytReady=new Promise(res=>{
     window.onYouTubeIframeAPIReady=()=>{yt=new YT.Player('ytp',{width:'100%',height:'100%',playerVars:{playsinline:1,rel:0},
       events:{onReady:()=>res(yt),onStateChange:e=>{if(e.data===0)step(1);if(playing&&playing.yt){if(e.data===1){isPlaying=true;const d=yt.getDuration();if(d&&!playing.dur){playing.dur=d;if(sel===playing)select(playing)}}if(e.data===2)isPlaying=false;syncPlayBtn()}},
-        onError:()=>{$('mSub').textContent='이 영상은 외부 재생이 막혀 있어요 · 다음 곡으로 넘어가요';setTimeout(()=>step(1),2500)}}})};
+        onError:()=>{$('mSub').textContent='This video can’t be played outside YouTube · skipping';setTimeout(()=>step(1),2500)}}})};
     const sc=document.createElement('script');sc.src='https://www.youtube.com/iframe_api';document.head.appendChild(sc);
   });
   return ytReady;
@@ -399,11 +405,27 @@ function toggle(){
   else{isPlaying=true;ac.resume();playing.yt?yt&&yt.playVideo():audioEl.play()}
   syncPlayBtn();
 }
-function syncPlayBtn(){$('pp').textContent=isPlaying?'⏸':'▶';$('pPlay').textContent=sel&&sel===playing&&isPlaying?'⏸ 일시정지':'▶ 재생'}
+function syncPlayBtn(){$('pp').textContent=isPlaying?'⏸':'▶';$('pPlay').textContent=sel&&sel===playing&&isPlaying?'⏸ Pause':'▶ Play'}
+let shuffle=false,hist=[],fwd=[];
+try{shuffle=localStorage.getItem('stardust-shuffle')==='1'}catch(e){}
+function syncShuf(){const b=$('shuf');b.classList.toggle('on',shuffle);b.setAttribute('aria-pressed',shuffle)}
+$('shuf').onclick=()=>{shuffle=!shuffle;fwd=[];syncShuf();try{localStorage.setItem('stardust-shuffle',shuffle?'1':'0')}catch(e){}};
+syncShuf();
 function step(d){
   const pool=tracks.filter(match);if(!pool.length)return;
-  const i=playing?pool.indexOf(playing):-1;const t=pool[(i+d+pool.length)%pool.length];play(t);if(sel)select(t);
+  let t;
+  if(shuffle){
+    if(d<0&&hist.length){if(playing)fwd.push(playing);t=hist.pop();go(t,false);return}
+    if(d>0&&fwd.length){t=fwd.pop()}
+    else{
+      const recent=new Set(hist.slice(-Math.floor(pool.length/2)));if(playing)recent.add(playing);
+      const fresh=pool.filter(x=>!recent.has(x));const from=fresh.length?fresh:pool.filter(x=>x!==playing);
+      t=(from.length?from:pool)[Math.floor(Math.random()*(from.length||pool.length))];
+    }
+  }else{const i=playing?pool.indexOf(playing):-1;t=pool[(i+d+pool.length)%pool.length];fwd=[]}
+  go(t,true);
 }
+function go(t,push){if(push&&playing&&playing!==t){hist.push(playing);if(hist.length>200)hist.shift()}play(t);if(sel)select(t)}
 $('pp').onclick=toggle;$('next').onclick=()=>step(1);$('prev').onclick=()=>step(-1);
 audioEl.onended=()=>step(1);
 $('bar').onclick=e=>{if(!playing)return;const f=e.offsetX/e.currentTarget.clientWidth;
@@ -420,9 +442,50 @@ function updatePlayer(){
 
 /* ---------- 유튜브 링크 추가 ---------- */
 const ytId=u=>{const m=String(u).match(/(?:v=|youtu\.be\/|shorts\/|embed\/|live\/)([\w-]{11})/)||String(u).trim().match(/^([\w-]{11})$/);return m&&m[1]};
+/* ---------- 발표 연도: MusicBrainz에서 자동 검색 ---------- */
+function setReleased(t,date){
+  t.released=date||'';
+  if(date){const y=+date.slice(0,4),m=+(date.slice(5,7)||6),d=+(date.slice(8,10)||15);t.year=y;t.day=((m-1)*30.4+d)/366}
+  else{const a=new Date(t.added);t.year=a.getFullYear();t.day=(a-new Date(t.year,0,1))/(366*864e5)}
+}
+const lookQ=[];let lookBusy=false;
+function queueLookup(t){if(t.released||t.noFind)return;t.looking=true;lookQ.push(t);runLookup()}
+async function runLookup(){
+  if(lookBusy)return;lookBusy=true;
+  while(lookQ.length){
+    const t=lookQ.shift();if(!tracks.includes(t))continue;
+    const date=await findRelease(t.artist,t.title);t.looking=false;
+    if(date){setReleased(t,date)}else t.noFind=true;
+    save(t);sortTracks();refreshUI();applyLayout();if(sel===t)select(t);
+    if(playing===t)$('mSub').textContent=t.artist+' · '+t.genre+' · '+t.year;
+    await new Promise(r=>setTimeout(r,1100)); // MusicBrainz는 1초에 1번까지
+  }
+  lookBusy=false;
+}
+const qEsc=v=>'"'+String(v).replace(/[\\"]/g,' ').trim()+'"';
+const cleanT=v=>String(v).replace(/\s*[\(\[][^\)\]]*[\)\]]/g,'').replace(/\s+(feat|ft)\.?\s.*$/i,'').trim();
+async function findRelease(artist,title){
+  if(!artist||/알 수 없는|^Unknown Artist$|^YouTube$/.test(artist))return null;
+  try{
+    const q=`recording:${qEsc(cleanT(title))} AND artist:${qEsc(cleanT(artist))}`;
+    const r=await fetch('https://musicbrainz.org/ws/2/recording/?fmt=json&limit=15&query='+encodeURIComponent(q));
+    if(!r.ok)return null;const j=await r.json();
+    const dates=(j.recordings||[]).filter(x=>x.score>=90&&x['first-release-date']).map(x=>x['first-release-date']).sort();
+    return dates[0]||null;
+  }catch(e){return null}
+}
+function bindYear(){
+  const el=$('pYear');if(!el)return;
+  el.onfocus=()=>{if(!sel.released)el.textContent=''};
+  el.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();el.blur()}};
+  el.onblur=()=>{if(!sel)return;const v=el.textContent.trim(),m=v.match(/^(\d{4})(?:[-.\/](\d{1,2}))?(?:[-.\/](\d{1,2}))?$/);
+    if(m){setReleased(sel,m[1]+(m[2]?'-'+m[2].padStart(2,'0'):'')+(m[3]?'-'+m[3].padStart(2,'0'):''));save(sel);sortTracks();refreshUI();applyLayout()}
+    select(sel)};
+}
+function save(t){dbPut([t])}
 function makeYT(o){
   const d=new Date(o.added),y=d.getFullYear();
-  return{id:o.id,yt:o.yt,title:o.title,artist:o.artist,genre:'YOUTUBE',year:y,day:(d-new Date(y,0,1))/(366*864e5),added:o.added,dur:0,seed:hash(o.yt)};
+  const t={id:o.id,yt:o.yt,title:o.title,artist:o.artist,genre:'YOUTUBE',year:y,day:(d-new Date(y,0,1))/(366*864e5),added:o.added,dur:0,seed:hash(o.yt)};setReleased(t,o.released);return t;
 }
 async function ytInfo(id){
   const u=encodeURIComponent('https://www.youtube.com/watch?v='+id);
@@ -442,8 +505,8 @@ $('ytCancel').onclick=()=>$('ytDlg').classList.remove('on');
 $('ytForm').onsubmit=async e=>{
   e.preventDefault();
   const urls=$('ytUrl').value.split(/[\s,]+/).filter(Boolean),ids=[...new Set(urls.map(ytId).filter(Boolean))];
-  if(!ids.length){$('ytMsg').textContent='유튜브 링크를 찾지 못했어요. 주소를 다시 확인해 주세요.';return}
-  $('ytMsg').textContent=`${ids.length}곡 정보를 불러오는 중…`;
+  if(!ids.length){$('ytMsg').textContent='No YouTube link found. Please check the address.';return}
+  $('ytMsg').textContent=`Loading ${ids.length} track${ids.length>1?'s':''}…`;
   const now=Date.now(),added=[];
   for(const [k,id] of ids.entries()){
     if(tracks.some(t=>t.yt===id))continue;
@@ -452,7 +515,7 @@ $('ytForm').onsubmit=async e=>{
   }
   $('ytDlg').classList.remove('on');
   if(!added.length)return;
-  tracks.push(...added);sortTracks();refreshUI();applyLayout();dbPut(added);select(added[0]);play(added[0]);
+  tracks.push(...added);sortTracks();refreshUI();applyLayout();dbPut(added);select(added[0]);play(added[0]);added.forEach(queueLookup);
 };
 
 /* ---------- 내 음악 파일 추가 ---------- */
@@ -462,14 +525,14 @@ const isAudio=f=>f.type.startsWith('audio')||/\.(mp3|wav|ogg|m4a|flac|aac|opus)$
 function makeTrack(f,added,id){
   const base=f.name.replace(/\.[^.]+$/,'').replace(/^\d+[\s._-]+/,''),parts=base.split(/\s+-\s+/);
   const d=new Date(added),y=d.getFullYear(),day=(d-new Date(y,0,1))/(366*864e5);
-  return{id,title:(parts[1]||parts[0]).trim(),artist:parts[1]?parts[0].trim():'알 수 없는 아티스트',genre:f.type.split('/')[1]?.toUpperCase().replace('MPEG','MP3')||'AUDIO',year:y,day,added,dur:0,seed:hash(f.name),file:true,url:URL.createObjectURL(f),blob:f};
+  return{id,title:(parts[1]||parts[0]).trim(),artist:parts[1]?parts[0].trim():'Unknown Artist',genre:f.type.split('/')[1]?.toUpperCase().replace('MPEG','MP3')||'AUDIO',year:y,day,added,dur:0,seed:hash(f.name),file:true,url:URL.createObjectURL(f),blob:f};
 }
 function addFiles(list,silent){
   const fs=[...list].filter(isAudio);if(!fs.length)return;
   const now=Date.now(),added=fs.map((f,k)=>makeTrack(f,now+k,now+'-'+k));
   tracks.push(...added);sortTracks();refreshUI();applyLayout();
   added.forEach(t=>{const a=new Audio();a.preload='metadata';a.src=t.url;a.onloadedmetadata=()=>{t.dur=a.duration||0;if(sel===t)select(t)};});
-  dbPut(added);
+  dbPut(added);added.forEach(queueLookup);
   if(!silent){select(added[0]);play(added[0])}
 }
 /* 드래그 앤 드롭 */
@@ -479,30 +542,30 @@ addEventListener('drop',e=>{e.preventDefault();document.body.classList.remove('d
 
 /* 삭제 */
 function removeTrack(t){
-  if(playing===t){stopAll();$('ytbox').classList.remove('on');playing=null;isPlaying=false;$('mTitle').textContent='점을 눌러 곡을 고르세요';$('mSub').textContent='';$('mCover').style.visibility='hidden';$('barI').style.width=0}
+  if(playing===t){stopAll();$('ytbox').classList.remove('on');playing=null;isPlaying=false;$('mTitle').textContent='Pick a dot to play';$('mSub').textContent='';$('mCover').style.visibility='hidden';$('barI').style.width=0}
   if(t.url)URL.revokeObjectURL(t.url);tracks=tracks.filter(x=>x!==t);dbDel(t.id);
   const same=sel&&tracks.find(x=>x.artist===t.artist);closePanel();if(same)select(same);
   sortTracks();refreshUI();applyLayout();syncPlayBtn();
 }
-function rename(el,key){el.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();el.blur()}};el.onblur=()=>{if(!sel)return;const v=el.textContent.trim();if(v&&v!==sel[key]){sel[key]=v;if(sel.yt)dbPut([sel]);else if(sel.blob){dbTx(s=>s.put({id:sel.id,added:sel.added,name:sel.blob.name,blob:sel.blob,title:sel.title,artist:sel.artist}))}refreshUI();applyLayout();select(sel);$('mTitle').textContent=playing?playing.title:$('mTitle').textContent}else el.textContent=sel[key]}}
+function rename(el,key){el.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();el.blur()}};el.onblur=()=>{if(!sel)return;const v=el.textContent.trim();if(v&&v!==sel[key]){sel[key]=v;save(sel);sel.noFind=false;if(!sel.released)queueLookup(sel);refreshUI();applyLayout();select(sel);$('mTitle').textContent=playing?playing.title:$('mTitle').textContent}else el.textContent=sel[key]}}
 rename($('pTitle'),'title');rename($('pArtist'),'artist');
 $('pDel').onclick=()=>sel&&removeTrack(sel);
 $('clear').onclick=()=>{$('confirm').classList.add('on')};
 $('cNo').onclick=()=>$('confirm').classList.remove('on');
-$('cYes').onclick=()=>{$('confirm').classList.remove('on');[...tracks].forEach(t=>{if(t.url)URL.revokeObjectURL(t.url)});$('ytbox').classList.remove('on');stopAll();playing=null;isPlaying=false;tracks=[];closePanel();dbClear();refreshUI();syncPlayBtn();$('mTitle').textContent='점을 눌러 곡을 고르세요';$('mSub').textContent='';$('mCover').style.visibility='hidden';$('barI').style.width=0};
+$('cYes').onclick=()=>{$('confirm').classList.remove('on');[...tracks].forEach(t=>{if(t.url)URL.revokeObjectURL(t.url)});$('ytbox').classList.remove('on');stopAll();playing=null;isPlaying=false;tracks=[];closePanel();dbClear();refreshUI();syncPlayBtn();$('mTitle').textContent='Pick a dot to play';$('mSub').textContent='';$('mCover').style.visibility='hidden';$('barI').style.width=0};
 
 /* 이 브라우저에 저장 (새로고침해도 유지) */
 let db=null;
 function dbOpen(){return new Promise(res=>{try{const r=indexedDB.open('stardust',1);r.onupgradeneeded=()=>r.result.createObjectStore('t',{keyPath:'id'});r.onsuccess=()=>res(db=r.result);r.onerror=()=>res(null)}catch(e){res(null)}})}
 function dbTx(fn){try{if(!db)return;const tx=db.transaction('t','readwrite');fn(tx.objectStore('t'))}catch(e){}}
-function dbPut(ts){dbTx(s=>ts.forEach(t=>s.put(t.yt?{id:t.id,added:t.added,yt:t.yt,title:t.title,artist:t.artist}:{id:t.id,added:t.added,name:t.blob.name,blob:t.blob})))}
+function dbPut(ts){dbTx(s=>ts.forEach(t=>{const o={id:t.id,added:t.added,title:t.title,artist:t.artist,released:t.released||'',noFind:!!t.noFind};if(t.yt)o.yt=t.yt;else{o.name=t.blob.name;o.blob=t.blob}s.put(o)}))}
 function dbDel(id){dbTx(s=>s.delete(id))}
 function dbClear(){dbTx(s=>s.clear())}
 dbOpen().then(d=>{
   if(!d)return;try{const r=d.transaction('t').objectStore('t').getAll();r.onsuccess=()=>{
     const rows=r.result||[];if(!rows.length)return;
-    rows.forEach(o=>{if(o.yt){tracks.push(makeYT(o));return}const f=o.blob instanceof File?o.blob:new File([o.blob],o.name,{type:o.blob.type});const t=makeTrack(f,o.added,o.id);if(o.title)t.title=o.title;if(o.artist)t.artist=o.artist;tracks.push(t);const a=new Audio();a.preload='metadata';a.src=t.url;a.onloadedmetadata=()=>{t.dur=a.duration||0}});
-    sortTracks();refreshUI();applyLayout();
+    rows.forEach(o=>{if(o.yt){const t=makeYT(o);t.noFind=!!o.noFind;tracks.push(t);return}const f=o.blob instanceof File?o.blob:new File([o.blob],o.name,{type:o.blob.type});const t=makeTrack(f,o.added,o.id);if(o.title)t.title=o.title;if(o.artist)t.artist=o.artist==='알 수 없는 아티스트'?'Unknown Artist':o.artist;setReleased(t,o.released);t.noFind=!!o.noFind;tracks.push(t);const a=new Audio();a.preload='metadata';a.src=t.url;a.onloadedmetadata=()=>{t.dur=a.duration||0}});
+    sortTracks();refreshUI();applyLayout();tracks.forEach(queueLookup);
   }}catch(e){}
 });
 
@@ -512,7 +575,8 @@ $('q').oninput=e=>{query=e.target.value.trim().toLowerCase()};
 $('genre').onchange=e=>{genre=e.target.value};
 $('layout').onchange=e=>{layout=e.target.value;applyLayout();if(layout==='galaxy')pitch=.75;if(layout==='helix')pitch=.15};
 addEventListener('keydown',e=>{
-  if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;
+  if(['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)||e.target.isContentEditable)return;
+  if(e.key==='s'||e.key==='S'){$('shuf').click()}
   if(e.code==='Space'){e.preventDefault();toggle()}
   if(e.key==='Escape'){closePanel();$('confirm').classList.remove('on');$('ytDlg').classList.remove('on')}
   if(e.key==='ArrowRight')step(1);if(e.key==='ArrowLeft')step(-1);
