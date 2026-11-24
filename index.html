@@ -75,6 +75,15 @@ body:has(#ytbox.on) #decide{bottom:300px}
 .x{position:absolute;top:8px;right:8px;background:none;border:0;color:var(--dim);width:32px;height:32px;cursor:pointer;font-size:16px}
 .del{background:none;border:1px solid var(--line);color:var(--dim);border-radius:6px;height:32px;padding:0 12px;cursor:pointer}
 .del:hover{color:var(--acc);border-color:var(--acc)}
+.hash{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.hash .chip{display:inline-flex;align-items:center;background:#1d1220;border:1px solid #4a2340;color:#ffb3d4;border-radius:14px;height:26px;padding:0 4px 0 10px;font-size:12px;cursor:pointer}
+.hash .chip.part{opacity:.6;border-style:dashed}
+.hash .chip.on{background:var(--acc);color:#000;border-color:var(--acc)}
+.hash .chip b{font-weight:400;color:#a77;margin-left:4px}.hash .chip.on b{color:#0009}
+.hash .chip button{background:none;border:0;color:inherit;opacity:.6;width:22px;height:22px;cursor:pointer;padding:0}
+.hash .chip button:hover{opacity:1}
+.hash input{background:none;border:1px dashed #444;border-radius:14px;height:26px;padding:0 10px;width:120px;font-size:16px;outline:0;color:var(--ink)}
+.hash input:focus{border-color:var(--acc)}
 #panel h3{font-size:12px;color:var(--dim);font-weight:400;margin:4px 0 0}
 #list{overflow:auto;margin:0;padding:0;list-style:none;flex:1}
 #list li{display:flex;gap:8px;align-items:center;padding:5px 4px;border-radius:4px;cursor:pointer}
@@ -165,10 +174,12 @@ body.drop #c{outline:2px dashed var(--acc);outline-offset:-10px}
   </label>
   <label class="ctl">⌕<input id="q" type="search" placeholder="Search" aria-label="Search"></label>
   <select id="genre" class="ctl" aria-label="Genre"></select>
+  <select id="tagSel" class="ctl" aria-label="Hashtag"></select>
   <select id="layout" class="ctl" aria-label="Layout">
     <option value="sphere">Sphere</option>
     <option value="galaxy">Spiral galaxy</option>
     <option value="clusters">Genre clusters</option>
+    <option value="tags">Hashtag clusters</option>
     <option value="helix">Year helix</option>
   </select>
   <button class="btn add" id="addBtn">+ Add</button>
@@ -196,8 +207,8 @@ body.drop #c{outline:2px dashed var(--acc);outline-offset:-10px}
 
 <div id="ytDlg" class="dlg" role="dialog" aria-modal="true" aria-labelledby="ytH"><form id="ytForm">
   <b id="ytH">Add from YouTube</b>
-  <p>Paste video or playlist links, separated by spaces or new lines.</p>
-  <textarea id="ytUrl" rows="4" placeholder="https://music.youtube.com/playlist?list=OLAK5uy_…&#10;https://youtu.be/…"></textarea>
+  <p>Paste as many video or playlist links as you like — one per line, or just paste them all at once.</p>
+  <textarea id="ytUrl" rows="7" placeholder="https://music.youtube.com/playlist?list=OLAK5uy_…&#10;https://youtu.be/…"></textarea>
   <label for="ytAlbum">Album name (optional)</label>
   <input id="ytAlbum" type="text" placeholder="Group the single videos above into this album" autocomplete="off">
   <p id="ytMsg" class="sm" aria-live="polite"></p>
@@ -228,6 +239,8 @@ body.drop #c{outline:2px dashed var(--acc);outline-offset:-10px}
       <button class="play" id="pPlay">▶ Play</button> <button class="del" id="pMove"></button> <button class="del" id="pDel">Delete</button>
     </div>
   </div>
+  <div id="pHash" class="hash"><span id="chips" style="display:contents"></span><input id="hashIn" list="tagList" placeholder="+ #tag" aria-label="Add hashtag" autocomplete="off"></div>
+  <datalist id="tagList"></datalist>
   <h3 id="pMore"></h3>
   <ul id="list"></ul>
 </aside>
@@ -239,7 +252,7 @@ body.drop #c{outline:2px dashed var(--acc);outline-offset:-10px}
     <div><small>ARTISTS</small><span id="sA">0</span></div>
     <div><small>SPAN</small><span id="sS">–</span></div>
   </div>
-  <span class="hint">Drag · Scroll to zoom · 1 2 3 view · L later · Space play · S shuffle</span>
+  <span class="hint">Drag · Scroll to zoom · 1 2 3 view · L later · Space play · S shuffle · search #tag</span>
   <div class="player">
     <button id="prev" aria-label="Previous">⏮</button>
     <button id="pp" aria-label="Play/Pause">▶</button>
@@ -317,7 +330,7 @@ function buildNodes(){
     if(n.kind!=='artist')n.tracks.sort(byNo);else n.tracks.sort((a,b)=>a.year+a.day-b.year-b.day||byNo(a,b));
     const t0=n.tracks[0];
     const first=n.tracks.reduce((a,b)=>a.year+a.day<=b.year+b.day?a:b);n.year=first.year;n.day=first.day;
-    n.genre=mode(n.tracks.map(t=>t.genre));n.yt=n.tracks.every(t=>t.yt);
+    n.genre=mode(n.tracks.map(t=>t.genre));{const all=n.tracks.flatMap(t=>t.tags||[]);n.tag=all.length?'#'+mode(all):'no tag'}n.yt=n.tracks.every(t=>t.yt);
     if(n.kind==='track'){n.title=t0.title;n.sub=t0.artist}
     else if(n.kind==='album'){n.title=t0.album||'Singles';n.sub=albumArtistOf(t0)}
     else{n.title=t0.artist;const al=new Set(n.tracks.filter(t=>t.album).map(albumKey)).size;n.sub=(al?al+' album'+(al>1?'s':'')+' · ':'')+n.tracks.length+' track'+(n.tracks.length>1?'s':'')}
@@ -334,8 +347,9 @@ function buildNodes(){
 const nodeOf=t=>t&&nodeMap.get(keyOf(t,view));
 
 /* ---------- layouts ---------- */
-let layout=LS.get('stardust-layout')||'sphere';
-const genreList=()=>[...new Set(nodes.map(n=>n.genre))];
+let layout=['sphere','galaxy','clusters','tags','helix'].includes(LS.get('stardust-layout'))?LS.get('stardust-layout'):'sphere';
+const clusterOf=n=>layout==='tags'?n.tag:n.genre;
+const genreList=()=>[...new Set(nodes.map(clusterOf))].sort((a,b)=>(a==='no tag')-(b==='no tag')||a.localeCompare(b));
 function applyLayout(){
   const n=nodes.length,r=rng(3),G=genreList();if(!n)return;
   const y0=Math.min(...nodes.map(t=>t.year)),y1=Math.max(...nodes.map(t=>t.year));
@@ -344,7 +358,7 @@ function applyLayout(){
     let x,y,z;
     if(layout==='sphere'){y=1-2*(i+.5)/n;const rr=Math.sqrt(1-y*y),th=i*2.399963;x=rr*Math.cos(th);z=rr*Math.sin(th)}
     else if(layout==='galaxy'){const f=i/n,rad=.06+f*1.05,a=(i%3)*2.094+rad*5.2+gauss(r)*.35/(rad*3+.4);x=rad*Math.cos(a);z=rad*Math.sin(a);y=gauss(r)*.05*(1.3-rad)}
-    else if(layout==='clusters'){const g=G.indexOf(t.genre),a=g/G.length*6.283,h=hash(t.sub);x=Math.cos(a)*.78+gauss(r)*.16*spread+((h%100)/100-.5)*.12;z=Math.sin(a)*.78+gauss(r)*.16*spread+((h>>7)%100/100-.5)*.12;y=(g%2?.22:-.22)+gauss(r)*.16*spread}
+    else if(layout==='clusters'||layout==='tags'){const g=G.indexOf(clusterOf(t)),a=g/G.length*6.283,h=hash(t.sub);x=Math.cos(a)*.78+gauss(r)*.16*spread+((h%100)/100-.5)*.12;z=Math.sin(a)*.78+gauss(r)*.16*spread+((h>>7)%100/100-.5)*.12;y=(g%2?.22:-.22)+gauss(r)*.16*spread}
     else{const f=(t.year-y0+t.day)/(y1-y0+1);y=f*2-1;const a=t.day*6.283+t.year*.4+i*.7,rad=.55+gauss(r)*.06;x=rad*Math.cos(a);z=rad*Math.sin(a)}
     t.tx=x;t.ty=y;t.tz=z;
   });
@@ -352,7 +366,11 @@ function applyLayout(){
 
 /* ================= filters + stats ================= */
 let yearMax=9999,query='',genre='all';
-const match=t=>t.year<=yearMax&&(genre==='all'||t.genre===genre)&&(!query||(t.title+' '+t.artist+' '+(t.album||'')).toLowerCase().includes(query));
+let tagF='all';
+const normTag=v=>String(v).replace(/^#+/,'').trim().replace(/\s+/g,'_').slice(0,30);
+const hasTag=(t,g)=>(t.tags||[]).some(x=>x.toLowerCase()===g.toLowerCase());
+const match=t=>t.year<=yearMax&&(genre==='all'||t.genre===genre)&&(tagF==='all'||hasTag(t,tagF))&&(!query||(query[0]==='#'?(t.tags||[]).some(x=>x.toLowerCase().startsWith(query.slice(1))):(t.title+' '+t.artist+' '+(t.album||'')+' '+(t.tags||[]).map(x=>'#'+x).join(' ')).toLowerCase().includes(query)));
+const allTags=()=>{const m=new Map();for(const t of tracks)for(const g of t.tags||[]){const k=g.toLowerCase();m.set(k,{name:m.get(k)?.name||g,n:(m.get(k)?.n||0)+1})}return[...m.values()].sort((a,b)=>b.n-a.n||a.name.localeCompare(b.name))};
 function refreshUI(){
   const L=lib(),ys=L.map(t=>t.year),now=new Date().getFullYear(),y0=ys.length?Math.min(...ys):now,y1=ys.length?Math.max(...ys,now):now;
   const atMax=yearMax>=+$('year').max;
@@ -364,6 +382,10 @@ function refreshUI(){
   const g=$('genre'),cur=genre;
   g.innerHTML='<option value="all">All genres</option>'+[...new Set(L.map(t=>t.genre))].sort().map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');
   g.value=[...g.options].some(o=>o.value===cur)?cur:'all';genre=g.value;
+  const T=allTags(),ts=$('tagSel');ts.style.display=T.length?'':'none';
+  ts.innerHTML='<option value="all">All #tags</option>'+T.map(x=>`<option value="${esc(x.name)}">#${esc(x.name)} (${x.n})</option>`).join('');
+  ts.value=T.some(x=>x.name.toLowerCase()===tagF.toLowerCase())?T.find(x=>x.name.toLowerCase()===tagF.toLowerCase()).name:'all';if(ts.value==='all')tagF='all';
+  $('tagList').innerHTML=T.map(x=>`<option value="${esc(x.name)}">`).join('');
   $('sT').textContent=L.length.toLocaleString();
   $('sB').textContent=new Set(L.filter(t=>t.album).map(albumKey)).size;
   $('sA').textContent=new Set(L.map(t=>t.artist)).size;
@@ -435,7 +457,7 @@ function frame(){
       for(const n of order){if(!show.has(n)||!n.on||n.d<.35)continue;ctx.fillStyle=`rgba(220,220,220,${(n.d-.3)*1.2})`;ctx.fillText(n.title,n.sx+n.r+6,n.sy+4)}
     }
   }
-  if(layout==='clusters'){
+  if(layout==='clusters'||layout==='tags'){
     ctx.font='12px "IBM Plex Mono",monospace';ctx.fillStyle='#9a9a9a';ctx.textAlign='center';
     genreList().forEach((g,i,G)=>{const a=i/G.length*6.283,p=project(Math.cos(a)*.78,(i%2?.22:-.22)+.34,Math.sin(a)*.78);ctx.fillText(g,p[0],p[1])});
   }
@@ -488,7 +510,7 @@ function findHover(x,y,rad=10){
   cv.style.cursor='pointer';tip.style.display='flex';
   tip.querySelector('img').src=view==='track'?trackCover(best.tracks[0]):nodeCover(best);
   tip.querySelector('span').textContent=best.title;
-  tip.querySelector('small').textContent=best.sub+(view==='artist'?'':' · '+best.year);
+  tip.querySelector('small').textContent=best.sub+(view==='artist'?'':' · '+best.year)+(view==='track'&&(best.tracks[0].tags||[]).length?' · '+best.tracks[0].tags.map(y=>'#'+y).join(' '):'');
   tip.style.left=Math.min(x+14,W-310)+'px';tip.style.top=Math.max(56,y-44)+'px';
 }
 
@@ -515,6 +537,7 @@ function render(){
   else{const al=new Set(tracksIn.filter(x=>x.album).map(albumKey)).size;tags=[al+' album'+(al!==1?'s':''),tracksIn.length+' tracks']}
   $('pTags').innerHTML=tags.map(v=>`<span>${esc(v)}</span>`).join('')+yearTag(tracksIn);
   bindYear(n);
+  renderHash(n);
   let list,head;
   if(n.kind==='track'){
     list=t.album?lib().filter(x=>albumKey(x)===albumKey(t)).sort(byNo):lib().filter(x=>x.artist===t.artist);
@@ -525,7 +548,7 @@ function render(){
   $('pMore').textContent=head;
   $('list').innerHTML=list.map(x=>{
     const num=n.kind==='album'||(n.kind==='track'&&t.album)?(x.no||''):x.year;
-    const extra=n.kind==='artist'&&x.album?`<small>${esc(x.album)}</small>`:'';
+    const extra=(n.kind==='artist'&&x.album?`<small>${esc(x.album)}</small>`:'')+((x.tags||[]).length?`<small>${esc(x.tags.slice(0,2).map(y=>'#'+y).join(' '))}</small>`:'');
     const pic=n.kind==='album'?'':`<img src="${trackCover(x)}" alt="">`;
     return`<li data-id="${esc(x.id)}" class="${x===playing||(n.kind==='track'&&x===t)?'cur':''}">${pic}<em>${esc(num)}</em><span>${esc(x.title)}</span>${extra}</li>`}).join('');
   $('pMove').textContent=space==='later'?'★ Keep':'↩ Later';$('pMove').title=space==='later'?'Move to My galaxy':'Move to Listen later';
@@ -585,6 +608,31 @@ editable($('pAlbum'),(n,v)=>{
   t.album=v;const mate=v&&tracks.find(x=>x!==t&&x.album===v&&(x.artist===t.artist||x.albumArtist===t.artist));t.albumArtist=mate?mate.albumArtist||mate.artist:'';
   if(mate&&!t.no)t.no=Math.max(0,...tracks.filter(x=>x.album===v).map(x=>x.no||0))+1;
   return[t];
+});
+function renderHash(n){
+  const all=n.tracks,counts=new Map();
+  for(const t of all)for(const g of t.tags||[]){const k=g.toLowerCase();const c=counts.get(k)||{name:g,n:0};c.n++;counts.set(k,c)}
+  const chips=[...counts.values()].sort((a,b)=>b.n-a.n).map(c=>`<span class="chip${c.n<all.length?' part':''}${tagF.toLowerCase()===c.name.toLowerCase()?' on':''}" data-t="${esc(c.name)}" title="Show only #${esc(c.name)}">#${esc(c.name)}${all.length>1?`<b>${c.n}/${all.length}</b>`:''}<button aria-label="Remove #${esc(c.name)}" data-x="${esc(c.name)}">×</button></span>`).join('');
+  $('chips').innerHTML=chips;$('hashIn').placeholder=all.length>1?'+ #tag all':'+ #tag';
+  if(panel.hashKey!==n.key){panel.hashKey=n.key;$('hashIn').value=''}
+}
+$('pHash').addEventListener('click',e=>{
+  if(!panel)return;const n=nodeMap.get(panel.key);if(!n)return;
+  const x=e.target.closest('[data-x]');
+  if(x){const g=x.dataset.x;n.tracks.forEach(t=>t.tags=(t.tags||[]).filter(y=>y.toLowerCase()!==g.toLowerCase()));save(n.tracks);refreshUI();buildNodes();render();return}
+  const c=e.target.closest('.chip');
+  if(c){const g=c.dataset.t;tagF=tagF.toLowerCase()===g.toLowerCase()?'all':g;refreshUI();render();toast(tagF==='all'?'Showing all tracks':'Showing #'+g)}
+});
+$('pHash').addEventListener('keydown',e=>{
+  if(e.target.id!=='hashIn')return;
+  if(e.key==='Enter'||e.key===','||e.key===' '&&e.target.value.trim()){
+    e.preventDefault();if(!panel)return;const n=nodeMap.get(panel.key);if(!n)return;
+    const vals=e.target.value.split(/[,\s]+/).map(normTag).filter(Boolean);if(!vals.length)return;
+    for(const t of n.tracks){t.tags=t.tags||[];for(const v of vals)if(!hasTag(t,v))t.tags.push(v)}
+    e.target.value='';save(n.tracks);refreshUI();buildNodes();render();
+  }else if(e.key==='Backspace'&&!e.target.value){
+    const n=nodeMap.get(panel&&panel.key);if(n&&n.kind==='track'){const t=n.tracks[0];if(t.tags&&t.tags.length){t.tags.pop();save([t]);refreshUI();buildNodes();render()}}
+  }
 });
 function bindYear(n){
   const el=$('pYear');if(!el)return;
@@ -775,15 +823,27 @@ async function playlistIds(list){
   });
 }
 async function pool(items,n,fn){const out=new Array(items.length);let i=0;await Promise.all(Array.from({length:Math.min(n,items.length)},async()=>{while(i<items.length){const k=i++;out[k]=await fn(items[k],k)}}));return out}
-function ytTrack(o){const t={id:'yt-'+o.yt,yt:o.yt,title:o.title,artist:o.artist,album:o.album||'',albumArtist:o.albumArtist||'',no:o.no||0,genre:'YOUTUBE',added:o.added,dur:o.dur||0,seed:hash(o.yt),noFind:!!o.noFind,later:!!o.later,heard:!!o.heard};setReleased(t,o.released);return t}
+function ytTrack(o){const t={id:'yt-'+o.yt,yt:o.yt,title:o.title,artist:o.artist,album:o.album||'',albumArtist:o.albumArtist||'',no:o.no||0,genre:'YOUTUBE',added:o.added,dur:o.dur||0,seed:hash(o.yt),noFind:!!o.noFind,later:!!o.later,heard:!!o.heard,tags:Array.isArray(o.tags)?o.tags:[]};setReleased(t,o.released);return t}
 function finishAlbum(list,name){
   if(name&&list.length){const aa=mode(list.map(t=>t.artist));list.forEach((t,i)=>{t.album=name;t.albumArtist=aa;t.no=t.no||i+1})}
 }
-const openYt=()=>{$('addDlg').classList.remove('on');$('ytDlg').classList.add('on');$('ytMsg').textContent='';$('ytUrl').value='';$('ytAlbum').value='';$('ytGo').disabled=false;setTimeout(()=>$('ytUrl').focus(),30)};
+function scanYT(text){
+  const toks=String(text).replace(/(https?:\/\/)/gi,' $1').replace(/(^|[^\w\/.])((?:www\.|m\.|music\.)?(?:youtube\.com|youtu\.be)\/)/gi,'$1 $2').split(/[\s,;|<>"'()\[\]]+/).filter(Boolean);
+  const out=[],seen=new Set();
+  for(const tk of toks){const it=parseYT(tk);if(!it)continue;const k=it.list?'l:'+it.list:'v:'+it.v;if(seen.has(k))continue;seen.add(k);out.push(it)}
+  return out;
+}
+function ytCount(){
+  const it=scanYT($('ytUrl').value),v=it.filter(x=>x.v).length,l=it.filter(x=>x.list).length;
+  $('ytMsg').textContent=it.length?`Found ${v?v+' video'+(v>1?'s':''):''}${v&&l?' · ':''}${l?l+' playlist'+(l>1?'s':''):''}`:'';
+  $('ytGo').textContent=it.length>1?`Add ${it.length}`:'Add';
+}
+$('ytUrl').addEventListener('input',ytCount);
+const openYt=()=>{$('addDlg').classList.remove('on');$('ytDlg').classList.add('on');$('ytMsg').textContent='';$('ytUrl').value='';$('ytGo').textContent='Add';$('ytAlbum').value='';$('ytGo').disabled=false;setTimeout(()=>$('ytUrl').focus(),30)};
 $('ytCancel').onclick=()=>$('ytDlg').classList.remove('on');
 $('ytForm').onsubmit=async e=>{
   e.preventDefault();
-  const items=$('ytUrl').value.split(/[\s,]+/).filter(Boolean).map(parseYT).filter(Boolean);
+  const items=scanYT($('ytUrl').value);
   if(!items.length){$('ytMsg').textContent='No YouTube link found. Please check the address.';return}
   $('ytGo').disabled=true;const msg=$('ytMsg');let now=Date.now();const added=[],albums=[];
   const have=new Set(tracks.map(t=>t.yt).filter(Boolean));
@@ -850,7 +910,7 @@ async function readTags(f){
   }catch(e){return{}}
 }
 function fileTrack(o){
-  const t={id:o.id,title:o.title,artist:o.artist,album:o.album||'',albumArtist:o.albumArtist||'',no:o.no||0,genre:o.genre||'AUDIO',added:o.added,dur:0,seed:hash(o.name),file:true,url:URL.createObjectURL(o.blob),blob:o.blob,name:o.name,art:o.art||null,artUrl:o.art?URL.createObjectURL(o.art):'',noFind:!!o.noFind,later:!!o.later,heard:!!o.heard};
+  const t={id:o.id,title:o.title,artist:o.artist,album:o.album||'',albumArtist:o.albumArtist||'',no:o.no||0,genre:o.genre||'AUDIO',added:o.added,dur:0,seed:hash(o.name),file:true,url:URL.createObjectURL(o.blob),blob:o.blob,name:o.name,art:o.art||null,artUrl:o.art?URL.createObjectURL(o.art):'',noFind:!!o.noFind,later:!!o.later,heard:!!o.heard,tags:Array.isArray(o.tags)?o.tags:[]};
   setReleased(t,o.released);return t;
 }
 async function addEntries(entries){
@@ -931,7 +991,7 @@ let db=null;
 function dbOpen(){return new Promise(res=>{try{const r=indexedDB.open('stardust',1);r.onupgradeneeded=()=>r.result.createObjectStore('t',{keyPath:'id'});r.onsuccess=()=>res(db=r.result);r.onerror=()=>res(null)}catch(e){res(null)}})}
 function dbTx(fn){try{if(!db)return;fn(db.transaction('t','readwrite').objectStore('t'))}catch(e){}}
 function save(list){dbTx(s=>list.forEach(t=>{
-  const o={id:t.id,added:t.added,title:t.title,artist:t.artist,album:t.album||'',albumArtist:t.albumArtist||'',no:t.no||0,genre:t.genre,released:t.released||'',noFind:!!t.noFind,dur:t.dur||0,later:!!t.later,heard:!!t.heard};
+  const o={id:t.id,added:t.added,title:t.title,artist:t.artist,album:t.album||'',albumArtist:t.albumArtist||'',no:t.no||0,genre:t.genre,released:t.released||'',noFind:!!t.noFind,dur:t.dur||0,later:!!t.later,heard:!!t.heard,tags:t.tags||[]};
   if(t.yt)o.yt=t.yt;else{o.name=t.name;o.blob=t.blob;o.art=t.art||null}
   s.put(o)}))}
 function dbDel(id){dbTx(s=>s.delete(id))}
@@ -978,6 +1038,7 @@ document.querySelectorAll('.seg.view button').forEach(b=>{b.onclick=()=>setView(
 $('year').oninput=e=>{yearMax=+e.target.value;$('yearL').textContent='~'+yearMax};
 $('q').oninput=e=>{query=e.target.value.trim().toLowerCase()};
 $('genre').onchange=e=>{genre=e.target.value};
+$('tagSel').onchange=e=>{tagF=e.target.value;if(panel)render()};
 $('layout').value=layout;
 $('layout').onchange=e=>{layout=e.target.value;LS.set('stardust-layout',layout);applyLayout();if(layout==='galaxy')pitch=.75;if(layout==='helix')pitch=.15};
 addEventListener('keydown',e=>{
