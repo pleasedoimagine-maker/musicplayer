@@ -167,7 +167,7 @@ body.drop #c{outline:2px dashed var(--acc);outline-offset:-10px}
     <button id="aFolder"><b>Album folder</b><small>Pick a folder — its name becomes the album. Artist/Album/Track folders work too.</small></button>
     <button id="aYt"><b>YouTube video or playlist</b><small>A playlist link (e.g. a YouTube Music album) becomes one album.</small></button>
   </div>
-  <div class="acts" style="justify-content:space-between"><button class="danger" id="aClear">Clear library</button><button class="btn" id="aClose">Close</button></div>
+  <div class="acts"><button class="btn" id="aClose">Close</button></div>
 </div></div>
 
 <div id="ytDlg" class="dlg" role="dialog" aria-modal="true" aria-labelledby="ytH"><form id="ytForm">
@@ -834,7 +834,6 @@ $('addBtn').onclick=openAdd;$('aClose').onclick=()=>$('addDlg').classList.remove
 $('aFiles').onclick=$('eFiles').onclick=()=>{$('addDlg').classList.remove('on');$('files').click()};
 $('aFolder').onclick=$('eFolder').onclick=()=>{$('addDlg').classList.remove('on');$('folder').click()};
 $('aYt').onclick=$('eYt').onclick=openYt;
-$('aClear').onclick=()=>{$('addDlg').classList.remove('on');ask('Clear the whole library?','Every track saved in this browser will be deleted.',()=>removeTracks([...tracks]))};
 
 /* ================= delete ================= */
 let askFn=null;
